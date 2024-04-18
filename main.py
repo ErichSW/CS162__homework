@@ -1,6 +1,4 @@
-import random
 import matplotlib.pyplot as plot
-import numpy as np
 
 
 # set up your lists
