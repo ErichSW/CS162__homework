@@ -1,0 +1,79 @@
+[serverside code]
+
+import socket
+import threading
+
+motd = "By running this code you agree to give me a good grade."
+
+
+# function to handle client connections
+def handle_client(c, addr):
+    name = str.capitalize(c.recv(1024).decode())
+    print("Client", addr, name, "has connected.")
+    welcome = "Welcome to the server, " + name
+    motd_message = "Message of the Day: " + motd
+    c.send(bytes(welcome + "\n" + motd_message, 'utf-8'))
+    while True:
+        # try except loop to protect against client disconnects
+        try:
+            message = c.recv(1024).decode()
+            if message == '/d':
+                print("Client", addr, name, "has disconnected.")
+                break
+            print(name, "says:", message)
+            c.send(bytes("Message received", 'utf-8'))
+
+        except ConnectionAbortedError:
+            print("Client", addr, name, "has lost connection.")
+            break
+
+    c.close()
+
+
+# setup server
+s = socket.socket()
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+print("Served started")
+s.bind(('localhost', 10001))
+s.listen(3)
+print("Waiting for connections")
+
+while True:
+    c, addr = s.accept()
+    client_thread = threading.Thread(target=handle_client, args=(c, addr))
+    client_thread.start()
+
+
+
+[clientside code]
+
+import socket
+
+name = input("Enter your name: ")
+print("Attempting to connect to server...")
+
+# try except loop to protect against server not running
+try:
+    c = socket.socket()
+    c.connect(('localhost', 10001))
+    c.send(bytes(name, 'utf-8'))
+    print("Connection successful.")
+    print(c.recv(1024).decode())
+    while True:
+        # try except loop to protect against server disconnects
+        try:
+            message = input("Enter a message, or type '/d' to disconnect: ")
+            c.send(bytes(message, 'utf-8'))
+            if message == '/d':
+                print("Closing connection")
+                break
+            print(c.recv(1024).decode())
+
+        except ConnectionResetError:
+            print("Server is not responding. Closing connection.")
+            break
+    c.close()
+
+except ConnectionRefusedError:
+    print("Server is not running. Contact the server administrator.")
+    exit()
